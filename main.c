@@ -1,4 +1,4 @@
-
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -13,6 +13,12 @@ typedef struct
 
 	int saida;
 } Porta;
+
+typedef struct
+{
+	Porta **portas;
+	int total;
+} Rede_portas;
 
 Porta *gerar_NOT(Porta *valor_entrada)
 {
@@ -69,7 +75,7 @@ Porta *gerar_OR(int num_conexoes, Porta *valor_entrada1, Porta *valor_entrada2, 
 	if (num_conexoes > 2)
 	{
 		va_list entradas;
-			va_start(entradas, valor_entrada2);
+		va_start(entradas, valor_entrada2);
 
 		for (int i = 2; i < num_conexoes; i++)
 		{
@@ -82,7 +88,7 @@ Porta *gerar_OR(int num_conexoes, Porta *valor_entrada1, Porta *valor_entrada2, 
 
 void update(Porta **portas)
 {
-	for (size_t i = 0; i < 4; i++) //DEPOIS PRECISO TROCAR ESSE 4 POR UMA VARIÁVEL DE TAMANHO DA REDE DE PORTAS 
+	for (size_t i = 0; i < 4; i++) // DEPOIS PRECISO TROCAR ESSE 4 POR UMA VARIÁVEL DE TAMANHO DA REDE DE PORTAS
 	{
 		switch (portas[i]->tipo)
 		{
@@ -94,7 +100,7 @@ void update(Porta **portas)
 
 			for (size_t j = 0; j < portas[i]->quant_entradas; j++)
 			{
-				//Se pelo menos uma entrada for 0,  a saida sera 0
+				// Se pelo menos uma entrada for 0,  a saida sera 0
 				if ((*portas[i]->entrada[j]) == 0)
 				{
 					portas[i]->saida = 0;
@@ -108,8 +114,8 @@ void update(Porta **portas)
 
 			for (size_t j = 0; j < portas[i]->quant_entradas; j++)
 			{
-				
-				//Se pelo menos uma entrada for 1,  a saida sera 1
+
+				// Se pelo menos uma entrada for 1,  a saida sera 1
 				if ((*portas[i]->entrada[j]) == 1)
 				{
 					portas[i]->saida = 1;
@@ -122,60 +128,102 @@ void update(Porta **portas)
 	}
 }
 
+int menu_criar_porta()
+{
+	char buffer[100];
 
-void user_cria_porta(){
-	
+	printf("Que tipo de porta logica deseja criar? \n\nSinal[0] \nNOT[1] \nAND[2]\n");
+	fgets(buffer, sizeof(buffer), stdin);
+
+	if (buffer[0] >= 48 && buffer[0] <= 57)
+		return (int)(buffer[0] - 48);
+	else
+		return -2;
 }
 
+void user_cria_porta(Rede_portas *rede_portas)
+{
+	switch (menu_criar_porta())
+	{
+	case 0:
+		// criar sinal de entrada
+		unsigned short int valor_entrada;
+		printf("Digite um valor de entrada [0 ou 1]: ");
+		while (1)
+		{
+			scanf("%hu", &valor_entrada);
+			if (valor_entrada == 0 || valor_entrada == 1)
+				break;
+		}
+
+		Porta *sinal = (Porta *)malloc(sizeof(Porta));
+		sinal->saida = valor_entrada;
+		sinal->entrada = NULL;
+		sinal->tipo = -1;
+		sinal->quant_entradas = 0;
+
+		rede_portas->portas[rede_portas->total++] = sinal;
+		break;
+		
+	case 1:
+		if(!rede_portas->total){//rede == 0
+			printf("Rede vazia, sem sinais ou saida de portas. Por favor, crie algum sinal para iniciar sua rede.\n");
+		}
+
+	default:
+		printf("Krl, tu é muito burro!\n");
+		break;
+	 }
+}
 
 int main()
 {
 	Porta sinalA;
 	sinalA.saida = 1;
 
-	Porta **rede_portas = (Porta **)malloc(sizeof(Porta *) * 10);
+	Rede_portas *rede_portas = (Rede_portas *)malloc(sizeof(Rede_portas));
+	rede_portas->portas = (Porta **)malloc(sizeof(Porta *) * 10);
 
-//Area de criacao de portas
-	Porta *porta1 = gerar_NOT(&sinalA);
-	rede_portas[0] = porta1;
+	user_cria_porta(rede_portas);
 
-	Porta *porta2 = gerar_NOT(porta1);
-	rede_portas[1] = porta2;
+	// printf("Entrada A \nSaida: %d\n\n", rede_portas->portas[0]->saida);
+	//  // Area de criacao de portas
+	//  Porta *porta1 = gerar_NOT(&sinalA); // 0
+	//  rede_portas->portas[rede_portas->total++] = porta1;
 
-	Porta *porta3 = gerar_AND(3, &sinalA, porta1, porta2);
-	rede_portas[2] = porta3;
+	// Porta *porta2 = gerar_NOT(porta1); // 1
+	// rede_portas->portas[rede_portas->total++]  = porta2;
 
-	Porta *porta4 = gerar_OR(2, &sinalA, porta2);
-	rede_portas[3] = porta4;
-	
-	update(rede_portas);
-//
+	// Porta *porta3 = gerar_AND(3, &sinalA, porta1, porta2); // 0
+	// rede_portas->portas[rede_portas->total++] = porta3;
 
-	printf("Entrada A \nSaida: %d\n\n", sinalA.saida);
-	printf("Porta NOT \nEntrada: %d \nSaida: %d\n\n", *porta1->entrada[0], porta1->saida);
-	printf("Porta NOT \nEntrada: %d \nSaida: %d\n\n", *porta2->entrada[0], porta2->saida);
+	// Porta *porta4 = gerar_OR(2, &sinalA, porta2); // 1
+	// rede_portas->portas[rede_portas->total++]  = porta4;
 
-	printf("Porta AND \nEntrada: %d", *porta3->entrada[0]);
+	// update(rede_portas->portas);
+	// //
 
-	for (size_t i = 1; i < porta3->quant_entradas; i++)
-	{
-		printf(", %d", *porta3->entrada[i]);
-	}
+	// printf("Entrada A \nSaida: %d\n\n", sinalA.saida);
+	// printf("Porta NOT \nEntrada: %d \nSaida: %d\n\n", *porta1->entrada[0], porta1->saida);
+	// printf("Porta NOT \nEntrada: %d \nSaida: %d\n\n", *porta2->entrada[0], porta2->saida);
 
-	printf("\nSaida: %d\n\n", porta4->saida);
-	
-	printf("Porta OR \nEntrada: %d", *porta4->entrada[0]);
+	// printf("Porta AND \nEntrada: %d", *porta3->entrada[0]);
 
-	for (size_t i = 1; i < porta4->quant_entradas; i++)
-	{
-		printf(", %d", *porta4->entrada[i]);
-	}
+	// for (size_t i = 1; i < porta3->quant_entradas; i++)
+	// {
+	// 	printf(", %d", *porta3->entrada[i]);
+	// }
 
-	printf("\nSaida: %d\n", porta4->saida);
+	// printf("\nSaida: %d\n\n", porta4->saida);
 
+	// printf("Porta OR \nEntrada: %d", *porta4->entrada[0]);
 
+	// for (size_t i = 1; i < porta4->quant_entradas; i++)
+	// {
+	// 	printf(", %d", *porta4->entrada[i]);
+	// }
 
-
+	// printf("\nSaida: %d\n", porta4->saida);
 
 	return 0;
 }
